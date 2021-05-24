@@ -66,5 +66,36 @@ resource "aws_route_table_association" "public_table_association" {
 }
 
 # Create Nat_Gateway and add route to privae table
+# before create elastic ip and assoicae the ip to nat gateway
+resource "aws_eip" "nat_eip" {
+  vpc = true
+  depends_on = [aws_internet_gateway.igw]  
+}
 
+resource "aws_nat_gateway" "nat_geteway" {
+  allocation_id = aws_eip.nat_eip.allocation_id
+  subnet_id = aws_subnet.public_subnet.id
+
+  tags = {
+    Name = "nat_geteway"
+    Environment = "ElasticSearch"
+  }
+}
+
+#create Private Subnet and Associal Nat
+resource "aws_route_table" "private_table" {
+  vpc_id = aws_vpc.MongoElastic.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_geteway.id 
+  }
+} 
+
+#associate Private subnet to private table
+resource "aws_route_table_association" "private_table_association" {
+  subnet_id = aws_subnet.private_subnet.id
+  route_table_id = aws_route_table.private_table.id
+}
+
+#Lets Create VPC peering from mongo db and 
 
